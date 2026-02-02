@@ -520,7 +520,7 @@ function App() {
              ระบบจัด<span className="text-blue-700">วันลา</span>ออนไลน์
           </h1>
           <p className="text-slate-600 text-sm md:text-lg max-w-2xl mx-auto font-medium px-4">
-            กรุณาเลือกหน่วยงานต้นสังกัดเพื่อเข้าสู่ระบบ
+            กรุณาเลือกหน่วยงานของท่านเพื่อเข้าสู่ระบบ
           </p>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 max-w-5xl w-full px-4">
