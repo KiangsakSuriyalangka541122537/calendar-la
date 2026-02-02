@@ -430,7 +430,11 @@ function App() {
       setUserForm({ name: '' });
     } catch (error: any) {
       console.error('Error saving user:', error);
-      alert('เกิดข้อผิดพลาดในการบันทึกบุคลากร: ' + error.message);
+      let msg = error.message;
+      if (msg.includes('position') && msg.includes('not-null constraint')) {
+        msg = 'กรุณาอัปเดตฐานข้อมูล (SQL): ลบคอลัมน์ position ออกจากตาราง employees ใน Supabase';
+      }
+      alert('เกิดข้อผิดพลาดในการบันทึกบุคลากร: ' + msg);
     } finally {
       setIsSaving(false);
     }

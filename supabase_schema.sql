@@ -9,6 +9,10 @@ create table if not exists employees (
   department text not null
 );
 
+-- 🔥 แก้ไขปัญหา Error "null value in column position"
+-- คำสั่งนี้จะลบคอลัมน์ position ออกจากตาราง หากยังค้างอยู่
+alter table employees drop column if exists position;
+
 -- 2. สร้างตารางการลา (leaves)
 create table if not exists leaves (
   id uuid default gen_random_uuid() primary key,
