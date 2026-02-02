@@ -1,3 +1,4 @@
+
 export enum Department {
   OPD = 'เวชระเบียนผู้ป่วยนอก',
   IPD = 'เวชระเบียนผู้ป่วยใน',
@@ -15,7 +16,6 @@ export enum LeaveType {
 export interface Employee {
   id: string;
   name: string;
-  position: string; // Added position field
   department: Department;
 }
 

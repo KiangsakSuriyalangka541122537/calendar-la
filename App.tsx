@@ -2,8 +2,8 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { 
   Users, Activity, Database, Search, Calendar as CalendarIcon, 
-  ArrowLeft, CheckCircle2, LayoutDashboard, ChevronRight, ChevronLeft, UserPlus, X, Briefcase,
-  Trash2, Save, AlertTriangle, RefreshCw, FileSpreadsheet, Loader2, User,
+  ArrowLeft, CheckCircle2, LayoutDashboard, ChevronRight, ChevronLeft, UserPlus, X,
+  Trash2, Save, AlertTriangle, Loader2, User,
   Pencil, Undo2, Edit3
 } from 'lucide-react';
 import { Department, Employee, LeaveRecord, LeaveType, LEAVE_COLORS } from './types';
@@ -35,7 +35,7 @@ function App() {
   const [leaveType, setLeaveType] = useState<LeaveType>(LeaveType.PERSONAL);
   
   const [isManageUserModalOpen, setIsManageUserModalOpen] = useState(false);
-  const [userForm, setUserForm] = useState({ name: '', position: '' });
+  const [userForm, setUserForm] = useState({ name: '' });
   const [editingEmployeeId, setEditingEmployeeId] = useState<string | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -74,7 +74,6 @@ function App() {
       const fetchedEmployees: Employee[] = (empData || []).map((e: any) => ({
         id: e.id,
         name: e.name,
-        position: e.position,
         department: e.department as Department
       }));
 
@@ -350,23 +349,22 @@ function App() {
   };
 
   const handleEditClick = (emp: Employee) => {
-    setUserForm({ name: emp.name, position: emp.position });
+    setUserForm({ name: emp.name });
     setEditingEmployeeId(emp.id);
   };
 
   const handleCancelEdit = () => {
-    setUserForm({ name: '', position: '' });
+    setUserForm({ name: '' });
     setEditingEmployeeId(null);
   };
 
   const handleUserSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!userForm.name || !userForm.position || !currentDepartment) return;
+    if (!userForm.name || !currentDepartment) return;
 
     // Normalize name (remove extra spaces) to ensure "Name  Surname" == "Name Surname"
     const normalizeName = (name: string) => name.replace(/\s+/g, ' ').trim();
     const normalizedInputName = normalizeName(userForm.name);
-    const trimmedPosition = userForm.position.trim();
     
     // Check for Duplicate Name (Only check exact full name match)
     // Allows: Same Firstname (diff Lastname), Same Lastname (diff Firstname)
@@ -386,9 +384,10 @@ function App() {
     try {
       if (editingEmployeeId) {
           // Update existing
+          // We only send 'name' now, position is removed
           const { error } = await supabase
             .from('employees')
-            .update({ name: normalizedInputName, position: trimmedPosition })
+            .update({ name: normalizedInputName })
             .eq('id', editingEmployeeId);
           
           if (error) throw error;
@@ -396,13 +395,13 @@ function App() {
           // Update local state
           setEmployees(prev => prev.map(emp => 
               emp.id === editingEmployeeId 
-                  ? { ...emp, name: normalizedInputName, position: trimmedPosition }
+                  ? { ...emp, name: normalizedInputName }
                   : emp
           ));
           
           // Also update selectedEmployee if it's the one being edited
           if (selectedEmployee?.id === editingEmployeeId) {
-            setSelectedEmployee(prev => prev ? { ...prev, name: normalizedInputName, position: trimmedPosition } : null);
+            setSelectedEmployee(prev => prev ? { ...prev, name: normalizedInputName } : null);
           }
 
           setEditingEmployeeId(null);
@@ -412,7 +411,6 @@ function App() {
             .from('employees')
             .insert([{
               name: normalizedInputName,
-              position: trimmedPosition,
               department: currentDepartment
             }])
             .select()
@@ -424,23 +422,18 @@ function App() {
             const newEmp: Employee = {
                 id: data.id,
                 name: data.name,
-                position: data.position,
                 department: data.department as Department
             };
             setEmployees(prev => [newEmp, ...prev]);
           }
       }
-      setUserForm({ name: '', position: '' });
+      setUserForm({ name: '' });
     } catch (error: any) {
       console.error('Error saving user:', error);
       alert('เกิดข้อผิดพลาดในการบันทึกบุคลากร: ' + error.message);
     } finally {
       setIsSaving(false);
     }
-  };
-
-  const handleSyncFromSheets = async () => {
-    fetchAndSetData(true);
   };
 
   const executeDeleteUser = async () => {
@@ -570,7 +563,6 @@ function App() {
                           </div>
                           <div className="truncate">
                             <p className="text-slate-900 text-sm font-normal truncate">{emp.name}</p>
-                            <p className="text-[10px] text-slate-500 font-medium truncate">{emp.position}</p>
                           </div>
                         </button>
                       ))}
@@ -586,7 +578,6 @@ function App() {
                             </div>
                             <div className="truncate">
                               <h3 className="font-normal text-slate-900 text-sm truncate">{selectedEmployee.name}</h3>
-                              <p className="text-[11px] text-slate-500 font-bold flex items-center gap-1 mt-0.5"><Briefcase className="w-3 h-3" />{selectedEmployee.position}</p>
                             </div>
                          </div>
                          <CheckCircle2 className="text-blue-600 w-4 h-4" />
@@ -719,39 +710,10 @@ function App() {
         </div>
       )}
 
-      {/* Delete Confirmation Modal (Triggered from Edit Modal) */}
-      {leaveToDelete && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 md:p-8 animate-in fade-in zoom-in-95 duration-200 border border-slate-100 text-center">
-                <div className="w-16 h-16 rounded-full bg-red-50 text-red-600 flex items-center justify-center mx-auto mb-4 border border-red-100"><Trash2 className="w-8 h-8" /></div>
-                <h3 className="text-xl font-bold text-slate-900 mb-2">ยืนยันยกเลิก?</h3>
-                <p className="text-slate-500 text-sm mb-6 leading-relaxed px-2">
-                  ต้องการยกเลิกการลา <span className="font-bold text-slate-800">"{leaveToDelete.type}"</span><br/>
-                  <div className="mt-2 text-slate-600 font-medium">
-                    {leaveToDelete.startDate === leaveToDelete.endDate ? (
-                       <span>วันที่ {formatDateDisplay(leaveToDelete.startDate)}</span>
-                    ) : (
-                       <span>{formatDateDisplay(leaveToDelete.startDate)} - {formatDateDisplay(leaveToDelete.endDate)}</span>
-                    )}
-                    <div className="text-xs text-slate-400 font-bold mt-1">
-                      (รวม {leaveToDelete.totalDays} วัน)
-                    </div>
-                  </div>
-                </p>
-                <div className="flex gap-3 w-full">
-                    <button onClick={() => setLeaveToDelete(null)} className="flex-1 py-3 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 font-bold transition-all">กลับ</button>
-                    <button onClick={handleConfirmDeleteLeave} disabled={isSaving} className="flex-1 py-3 rounded-xl bg-red-600 text-white font-bold hover:bg-red-700 shadow-lg shadow-red-100 transition-all flex items-center justify-center gap-2">
-                        {isSaving && <Loader2 className="w-4 h-4 animate-spin" />} ยืนยัน
-                    </button>
-                </div>
-          </div>
-        </div>
-      )}
-
       {/* User Management Modal */}
       {isManageUserModalOpen && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl overflow-hidden flex flex-col max-h-[90vh] border border-slate-200">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl overflow-hidden flex flex-col max-h-[90vh] border border-slate-200">
             <div className="bg-slate-50 px-6 py-5 border-b border-slate-200 flex justify-between items-center">
                 <div>
                   <h3 className="font-bold text-slate-900 text-lg flex items-center gap-2">
@@ -760,17 +722,13 @@ function App() {
                   <p className="text-[11px] text-slate-500 font-bold mt-1 uppercase tracking-wider">{currentDepartment}</p>
                 </div>
                 <div className="flex items-center gap-2">
-                    <button onClick={handleSyncFromSheets} disabled={isSyncing} className="flex text-xs items-center gap-2 bg-white border border-slate-200 px-4 py-2 rounded-lg hover:bg-slate-50 disabled:opacity-50 font-bold shadow-sm transition-all text-black">
-                        {isSyncing ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <FileSpreadsheet className="w-3.5 h-3.5" />} 
-                        {isSyncing ? 'กำลังดึงข้อมูล...' : 'ดึงข้อมูล'}
-                    </button>
                     <button onClick={() => { setIsManageUserModalOpen(false); handleCancelEdit(); }} className="text-slate-400 hover:text-slate-900 p-1.5"><X className="w-7 h-7" /></button>
                 </div>
             </div>
             
             <div className="p-4 md:p-6 bg-white border-b border-slate-100">
                 <form onSubmit={handleUserSubmit} className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
-                    <div className="md:col-span-5">
+                    <div className="md:col-span-10">
                       <label className="text-xs font-bold text-slate-500 mb-2 block uppercase tracking-wider">ชื่อ - นามสกุล</label>
                       <input 
                         type="text" 
@@ -778,17 +736,6 @@ function App() {
                         placeholder="นายสมชาย ใจดี" 
                         value={userForm.name} 
                         onChange={e => setUserForm({...userForm, name: e.target.value})} 
-                        className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm font-bold bg-white text-black focus:border-blue-500 outline-none transition-all placeholder:text-slate-400 shadow-sm" 
-                      />
-                    </div>
-                    <div className="md:col-span-5">
-                      <label className="text-xs font-bold text-slate-500 mb-2 block uppercase tracking-wider">ตำแหน่ง</label>
-                      <input 
-                        type="text" 
-                        required 
-                        placeholder="เจ้าหน้าที่ฯ" 
-                        value={userForm.position} 
-                        onChange={e => setUserForm({...userForm, position: e.target.value})} 
                         className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm font-bold bg-white text-black focus:border-blue-500 outline-none transition-all placeholder:text-slate-400 shadow-sm" 
                       />
                     </div>
@@ -814,8 +761,7 @@ function App() {
                             <tr>
                               <th className="px-4 py-4 font-bold text-[10px] uppercase tracking-wider w-16 text-center">ลำดับ</th>
                               <th className="px-6 py-4 font-bold text-[10px] uppercase tracking-wider">ชื่อ - นามสกุล</th>
-                              <th className="px-6 py-4 font-bold text-[10px] uppercase tracking-wider">ตำแหน่ง</th>
-                              <th className="px-6 py-4 font-bold text-[10px] uppercase tracking-wider text-center">จัดการ</th>
+                              <th className="px-6 py-4 font-bold text-[10px] uppercase tracking-wider text-center w-32">จัดการ</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-slate-50">
@@ -827,7 +773,6 @@ function App() {
                                             {emp.name}
                                             {editingEmployeeId === emp.id && <span className="ml-2 text-[10px] text-amber-600 font-bold bg-amber-100 px-1.5 py-0.5 rounded-md">กำลังแก้ไข</span>}
                                           </td>
-                                          <td className="px-6 py-4 text-slate-600 font-medium">{emp.position}</td>
                                           <td className="px-6 py-4 text-center">
                                               <div className="flex items-center justify-center gap-2">
                                                 <button onClick={() => handleEditClick(emp)} className="p-2 text-amber-500 hover:text-amber-700 hover:bg-amber-50 rounded-lg transition-all" title="แก้ไขรายชื่อ">
@@ -842,7 +787,7 @@ function App() {
                                   ))
                               ) : (
                                   <tr>
-                                      <td colSpan={4} className="px-6 py-12 text-center text-slate-400 font-medium italic">
+                                      <td colSpan={3} className="px-6 py-12 text-center text-slate-400 font-medium italic">
                                           ไม่มีรายชื่อบุคลากรในแผนกนี้
                                       </td>
                                   </tr>

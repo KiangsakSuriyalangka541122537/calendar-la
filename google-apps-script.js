@@ -25,7 +25,7 @@ function setupSheets() {
     let sheet = ss.getSheetByName(deptName);
     if (!sheet) {
       sheet = ss.insertSheet(deptName);
-      sheet.appendRow(["ชื่อ - นามสกุล", "ตำแหน่ง"]);
+      sheet.appendRow(["ชื่อ - นามสกุล"]);
       formatHeader(sheet);
     }
   });
@@ -71,7 +71,6 @@ function doGet(e) {
           allEmployees.push({
             id: deptName + "_" + i,
             name: data[i][0],
-            position: data[i][1] || "",
             department: deptName
           });
         }
@@ -142,7 +141,7 @@ function doPost(e) {
     if (action === "addEmployee") {
       const sheet = ss.getSheetByName(data.department);
       if (sheet) {
-        sheet.appendRow([data.name, data.position]);
+        sheet.appendRow([data.name]);
         return makeResponse("success", "บันทึกบุคลากรเรียบร้อย");
       }
     } 
