@@ -3,7 +3,7 @@ import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { 
   Users, Activity, Database, Search, Calendar as CalendarIcon, 
   ArrowLeft, CheckCircle2, LayoutDashboard, ChevronRight, ChevronLeft, UserPlus, X, Briefcase,
-  Trash2, Save, AlertTriangle, RefreshCw, FileSpreadsheet, Loader2, User, Eraser,
+  Trash2, Save, AlertTriangle, RefreshCw, FileSpreadsheet, Loader2, User,
   Pencil, Undo2, Edit3
 } from 'lucide-react';
 import { Department, Employee, LeaveRecord, LeaveType, LEAVE_COLORS } from './types';
@@ -469,49 +469,6 @@ function App() {
     }
   };
 
-  // New function to clear all data
-  const handleClearAllData = async () => {
-    if (!window.confirm('⚠️ คำเตือน: คุณต้องการลบข้อมูล "บุคลากร" และ "ประวัติการลา" ทั้งหมดในระบบใช่หรือไม่?\n\nการกระทำนี้ไม่สามารถย้อนกลับได้!')) {
-      return;
-    }
-
-    if (!window.confirm('ยืนยันครั้งสุดท้าย: ลบข้อมูลทั้งหมดจริงหรือไม่?')) {
-      return;
-    }
-
-    setIsSaving(true);
-    try {
-      // Delete all leaves first (to avoid foreign key constraints if any, though cascade handles it usually)
-      const { error: leaveError } = await supabase
-        .from('leaves')
-        .delete()
-        .neq('id', '00000000-0000-0000-0000-000000000000'); // Delete where ID is not empty UUID (basically all)
-
-      if (leaveError) throw leaveError;
-
-      // Delete all employees
-      const { error: empError } = await supabase
-        .from('employees')
-        .delete()
-        .neq('id', '00000000-0000-0000-0000-000000000000');
-
-      if (empError) throw empError;
-
-      // Clear local state
-      setEmployees([]);
-      setLeaves([]);
-      setSelectedEmployee(null);
-      setSearchQuery('');
-      
-      alert('✅ ล้างข้อมูลทั้งหมดเรียบร้อยแล้ว');
-    } catch (error: any) {
-      console.error('Error clearing data:', error);
-      alert('❌ เกิดข้อผิดพลาดในการล้างข้อมูล: ' + error.message);
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
   if (!currentDepartment) {
     return (
       <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4 md:p-6">
@@ -803,10 +760,6 @@ function App() {
                   <p className="text-[11px] text-slate-500 font-bold mt-1 uppercase tracking-wider">{currentDepartment}</p>
                 </div>
                 <div className="flex items-center gap-2">
-                    <button onClick={handleClearAllData} disabled={isSaving} className="flex text-xs items-center gap-2 bg-red-50 border border-red-100 text-red-600 px-4 py-2 rounded-lg hover:bg-red-100 disabled:opacity-50 font-bold shadow-sm transition-all mr-2">
-                        <Eraser className="w-3.5 h-3.5" /> 
-                        ล้างข้อมูลทั้งหมด
-                    </button>
                     <button onClick={handleSyncFromSheets} disabled={isSyncing} className="flex text-xs items-center gap-2 bg-white border border-slate-200 px-4 py-2 rounded-lg hover:bg-slate-50 disabled:opacity-50 font-bold shadow-sm transition-all text-black">
                         {isSyncing ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <FileSpreadsheet className="w-3.5 h-3.5" />} 
                         {isSyncing ? 'กำลังดึงข้อมูล...' : 'ดึงข้อมูล'}
