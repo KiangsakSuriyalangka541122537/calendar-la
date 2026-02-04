@@ -714,6 +714,40 @@ function App() {
         </div>
       )}
 
+      {/* Delete Leave Confirmation Modal */}
+      {leaveToDelete && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm animate-in fade-in zoom-in-95 duration-200 border border-slate-200 p-6 text-center">
+            <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
+              <Trash2 className="w-6 h-6 text-red-600" />
+            </div>
+            <h3 className="text-lg font-bold text-slate-900 mb-2">ยืนยันการลบ?</h3>
+            <p className="text-sm text-slate-500 mb-6">
+              คุณต้องการลบรายการลาช่วงวันที่ <br/>
+              <span className="font-bold text-slate-700">
+                {formatDateDisplay(leaveToDelete.startDate)} - {formatDateDisplay(leaveToDelete.endDate)}
+              </span>
+              <br/>ใช่หรือไม่? การกระทำนี้ไม่สามารถย้อนกลับได้
+            </p>
+            <div className="flex gap-3">
+              <button 
+                onClick={() => { setEditingLeaveBatch(leaveToDelete); setLeaveToDelete(null); }}
+                className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-bold hover:bg-slate-50 transition-colors text-sm"
+              >
+                ย้อนกลับ
+              </button>
+              <button 
+                onClick={handleConfirmDeleteLeave} 
+                disabled={isSaving}
+                className="flex-1 py-2.5 rounded-xl bg-red-600 text-white font-bold hover:bg-red-700 shadow-lg shadow-red-200 transition-colors text-sm flex items-center justify-center gap-2"
+              >
+                {isSaving ? <Loader2 className="w-4 h-4 animate-spin"/> : null} ลบรายการ
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* User Management Modal */}
       {isManageUserModalOpen && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
@@ -804,6 +838,39 @@ function App() {
           </div>
         </div>
       )}
+
+      {/* Delete User Confirmation Modal */}
+      {deleteConfirm.isOpen && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm animate-in fade-in zoom-in-95 duration-200 border border-slate-200 p-6 text-center">
+            <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
+              <Trash2 className="w-6 h-6 text-red-600" />
+            </div>
+            <h3 className="text-lg font-bold text-slate-900 mb-2">ยืนยันการลบบุคลากร?</h3>
+            <p className="text-sm text-slate-500 mb-6">
+              คุณต้องการลบรายชื่อ <br/>
+              <span className="font-bold text-slate-700">{deleteConfirm.name}</span>
+              <br/>ออกจากระบบใช่หรือไม่?
+            </p>
+            <div className="flex gap-3">
+              <button 
+                onClick={() => setDeleteConfirm({ ...deleteConfirm, isOpen: false })}
+                className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-bold hover:bg-slate-50 transition-colors text-sm"
+              >
+                ยกเลิก
+              </button>
+              <button 
+                onClick={executeDeleteUser} 
+                disabled={isSaving}
+                className="flex-1 py-2.5 rounded-xl bg-red-600 text-white font-bold hover:bg-red-700 shadow-lg shadow-red-200 transition-colors text-sm flex items-center justify-center gap-2"
+              >
+                {isSaving ? <Loader2 className="w-4 h-4 animate-spin"/> : null} ลบรายชื่อ
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
