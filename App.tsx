@@ -352,6 +352,16 @@ function App() {
       setIsLeaveModalOpen(false);
     } catch (error: any) {
       console.error('Error saving leave:', error);
+      
+      // Check for Foreign Key Violation (Stale Data)
+      if (error.message?.includes('foreign key constraint') || error.code === '23503') {
+         alert('⚠️ ข้อมูลไม่เป็นปัจจุบัน: รายชื่อบุคลากรนี้อาจถูกลบและสร้างใหม่แล้ว\nระบบจะรีเฟรชข้อมูลล่าสุดให้ กรุณาเลือกบุคลากรและทำรายการอีกครั้ง');
+         setIsLeaveModalOpen(false);
+         setSelectedEmployee(null);
+         fetchAndSetData(false);
+         return;
+      }
+
       alert('เกิดข้อผิดพลาดในการบันทึก: ' + error.message);
     } finally {
       setIsSaving(false);
