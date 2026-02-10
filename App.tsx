@@ -94,7 +94,14 @@ function App() {
 
     } catch (error: any) {
       console.error("Error loading data:", error);
-      if (isShowAlert) alert('❌ เกิดข้อผิดพลาด: ' + error.message);
+      let msg = error.message;
+      
+      // Handle Schema Cache Error specifically
+      if (msg.includes('schema cache') || msg.includes('Could not find the table')) {
+        msg = 'ระบบ Supabase กำลังรีเฟรชโครงสร้างตาราง กรุณารันไฟล์ "supabase_fix_cache.sql" ใน SQL Editor แล้วลองใหม่อีกครั้ง';
+      }
+
+      if (isShowAlert) alert('❌ เกิดข้อผิดพลาด: ' + msg);
     } finally {
       setIsSyncing(false);
     }
@@ -434,9 +441,16 @@ function App() {
     } catch (error: any) {
       console.error('Error saving user:', error);
       let msg = error.message;
-      if (msg.includes('position') && msg.includes('not-null constraint')) {
-        msg = 'กรุณาอัปเดตฐานข้อมูล (SQL): ลบคอลัมน์ position ออกจากตาราง employees ใน Supabase';
+      
+      // Handle Schema Cache Error
+      if (msg.includes('schema cache') || msg.includes('Could not find the table')) {
+        msg = 'ระบบ Supabase กำลังรีเฟรชโครงสร้างตาราง กรุณารันไฟล์ "supabase_fix_cache.sql" แล้วลองใหม่';
       }
+      // Handle Position Column Error (Legacy)
+      else if (msg.includes('position') && msg.includes('not-null constraint')) {
+        msg = 'โครงสร้างตารางไม่ถูกต้อง (มีคอลัมน์ position) กรุณารันไฟล์ "supabase_rls_fix.sql"';
+      }
+
       alert('เกิดข้อผิดพลาดในการบันทึกบุคลากร: ' + msg);
     } finally {
       setIsSaving(false);

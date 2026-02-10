@@ -1,4 +1,7 @@
 
+-- 🔴 แก้ไข Error 23502: ลบคอลัมน์ position ออกจากตาราง เพราะไม่ได้ใช้งานแล้ว และติด Not Null Constraint
+ALTER TABLE employees DROP COLUMN IF EXISTS position;
+
 -- คำสั่งสำหรับนำรายชื่อเข้าสู่ระบบ (Copy ไปวางใน Supabase SQL Editor)
 
 -- 1. แผนกเวชระเบียนผู้ป่วยนอก (OPD)
