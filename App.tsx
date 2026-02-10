@@ -4,7 +4,7 @@ import {
   Users, Activity, Database, Search, Calendar as CalendarIcon, 
   ArrowLeft, CheckCircle2, LayoutDashboard, ChevronRight, ChevronLeft, UserPlus, X,
   Trash2, Save, AlertTriangle, Loader2, User,
-  Pencil, Undo2, Edit3
+  Pencil, Undo2, Edit3, RefreshCw
 } from 'lucide-react';
 import { Department, Employee, LeaveRecord, LeaveType, LEAVE_COLORS } from './types';
 import { INITIAL_EMPLOYEES, INITIAL_LEAVES, DEPARTMENTS, getHolidayName } from './constants';
@@ -74,7 +74,8 @@ function App() {
       const fetchedEmployees: Employee[] = (empData || []).map((e: any) => ({
         id: e.id,
         name: e.name,
-        department: e.department as Department
+        // Trim whitespace to ensure exact matching with Enum
+        department: (e.department || '').trim() as Department
       }));
 
       const processedLeaves: LeaveRecord[] = (leaveData || []).map((l: any) => ({
@@ -87,7 +88,9 @@ function App() {
       setEmployees(fetchedEmployees);
       setLeaves(processedLeaves);
       
-      if (isShowAlert) alert('✅ ซิงค์ข้อมูลสำเร็จ!');
+      console.log(`Loaded ${fetchedEmployees.length} employees and ${processedLeaves.length} leaves`);
+      
+      if (isShowAlert) alert(`✅ ซิงค์ข้อมูลสำเร็จ! (พบรายชื่อ ${fetchedEmployees.length} คน)`);
 
     } catch (error: any) {
       console.error("Error loading data:", error);
@@ -527,6 +530,9 @@ function App() {
                 </div>
               ))}
              </div>
+             <button onClick={() => fetchAndSetData(true)} className="p-2 text-slate-500 hover:text-blue-700 hover:bg-slate-100 rounded-full transition-all" title="รีเฟรชข้อมูล">
+                <RefreshCw className={`w-5 h-5 ${isSyncing ? 'animate-spin text-blue-700' : ''}`} />
+             </button>
              <div className="h-8 w-8 md:h-9 md:w-9 rounded-full bg-slate-900 flex items-center justify-center text-white shadow-sm">
                <Users className="w-4 h-4 md:w-5 md:h-5" />
              </div>
@@ -826,7 +832,7 @@ function App() {
                               ) : (
                                   <tr>
                                       <td colSpan={3} className="px-6 py-12 text-center text-slate-400 font-medium italic">
-                                          ไม่มีรายชื่อบุคลากรในแผนกนี้
+                                          {employees.length === 0 ? "ไม่พบข้อมูลในระบบ (ตรวจสอบ RLS Policy)" : "ไม่มีรายชื่อบุคลากรในแผนกนี้"}
                                       </td>
                                   </tr>
                               )}
