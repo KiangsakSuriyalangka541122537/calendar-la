@@ -635,6 +635,69 @@ function App() {
             );
           })}
         </div>
+        
+        {/* Password Modal for Department Selection */}
+        {isPasswordModalOpen && (
+          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[100] flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm animate-in fade-in zoom-in-95 duration-200 border border-slate-200 overflow-hidden">
+              <div className="bg-slate-50 px-6 py-4 border-b border-slate-100 flex justify-between items-center">
+                <h3 className="font-bold text-slate-900 flex items-center gap-2">
+                  <Lock className="w-4 h-4 text-blue-600" /> ยืนยันรหัสผ่าน
+                </h3>
+                <button 
+                  onClick={() => setIsPasswordModalOpen(false)} 
+                  className="text-slate-400 hover:text-slate-900 transition-colors"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+              <form onSubmit={handlePasswordSubmit} className="p-6">
+                <div className="text-center mb-6">
+                  <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-3 border border-blue-100">
+                    <Lock className="w-8 h-8 text-blue-600" />
+                  </div>
+                  <h4 className="font-bold text-slate-900 mb-1">{pendingDepartment}</h4>
+                  <p className="text-xs text-slate-500 font-medium">กรุณาใส่รหัสผ่านเพื่อเข้าสู่ระบบแผนก</p>
+                </div>
+                
+                <div className="mb-6">
+                  <input 
+                    type="password" 
+                    autoFocus
+                    className={`w-full px-4 py-3 bg-slate-50 border rounded-xl outline-none text-center text-2xl tracking-[0.5em] font-bold transition-all ${passwordError ? 'border-red-500 bg-red-50 text-red-600 animate-shake' : 'border-slate-200 focus:border-blue-500 focus:bg-white'}`}
+                    placeholder="••••"
+                    value={passwordInput}
+                    onChange={(e) => {
+                      setPasswordInput(e.target.value);
+                      setPasswordError(false);
+                    }}
+                  />
+                  {passwordError && (
+                    <p className="text-center text-red-500 text-xs font-bold mt-2 flex items-center justify-center gap-1">
+                      <AlertTriangle className="w-3 h-3" /> รหัสผ่านไม่ถูกต้อง
+                    </p>
+                  )}
+                </div>
+
+                <div className="flex flex-col gap-2">
+                  <button 
+                    type="submit"
+                    className="w-full py-3.5 bg-blue-700 text-white rounded-xl font-bold hover:bg-blue-800 shadow-lg shadow-blue-200 transition-all flex items-center justify-center gap-2"
+                  >
+                    เข้าสู่ระบบ
+                  </button>
+                  <button 
+                    type="button"
+                    onClick={() => setIsPasswordModalOpen(false)}
+                    className="w-full py-3 text-slate-500 font-bold hover:text-slate-700 transition-colors"
+                  >
+                    ยกเลิก
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
