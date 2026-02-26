@@ -876,7 +876,9 @@ function App() {
                         {cancelledLeaves
                           .filter(l => {
                             const d = new Date(l.leaveDate);
-                            return d.getMonth() === currentDate.getMonth() && d.getFullYear() === currentDate.getFullYear();
+                            return d.getMonth() === currentDate.getMonth() && 
+                                   d.getFullYear() === currentDate.getFullYear() &&
+                                   l.department === currentDepartment;
                           })
                           .length === 0 ? (
                             <div className="text-center py-20 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200">
@@ -888,7 +890,9 @@ function App() {
                               {cancelledLeaves
                                 .filter(l => {
                                   const d = new Date(l.leaveDate);
-                                  return d.getMonth() === currentDate.getMonth() && d.getFullYear() === currentDate.getFullYear();
+                                  return d.getMonth() === currentDate.getMonth() && 
+                                         d.getFullYear() === currentDate.getFullYear() &&
+                                         l.department === currentDepartment;
                                 })
                                 .map(l => (
                                   <div key={l.id} className="bg-white border border-slate-200 rounded-xl p-4 flex items-center justify-between hover:border-red-200 hover:shadow-sm transition-all">
