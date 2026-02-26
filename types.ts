@@ -42,3 +42,13 @@ export const LEAVE_TEXT_COLORS: Record<LeaveType, string> = {
   [LeaveType.MATERNITY]: 'text-pink-700',
   [LeaveType.ORDINATION]: 'text-amber-700'
 };
+
+export interface CancelledLeave {
+  id: string;
+  cancelledAt: string;
+  employeeId: string;
+  employeeName: string;
+  leaveDate: string;
+  leaveType: LeaveType;
+  department: string;
+}

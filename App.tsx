@@ -4,10 +4,10 @@ import {
   Users, Activity, Database, Search, Calendar as CalendarIcon, 
   ArrowLeft, CheckCircle2, LayoutDashboard, ChevronRight, ChevronLeft, UserPlus, X,
   Trash2, Save, AlertTriangle, Loader2, User,
-  Pencil, Undo2, Edit3, RefreshCw
+  Pencil, Undo2, Edit3, RefreshCw, History, Lock
 } from 'lucide-react';
-import { Department, Employee, LeaveRecord, LeaveType, LEAVE_COLORS } from './types';
-import { INITIAL_EMPLOYEES, INITIAL_LEAVES, DEPARTMENTS, getHolidayName } from './constants';
+import { Department, Employee, LeaveRecord, LeaveType, LEAVE_COLORS, CancelledLeave } from './types';
+import { INITIAL_EMPLOYEES, INITIAL_LEAVES, DEPARTMENTS, getHolidayName, DEPARTMENT_PASSWORDS } from './constants';
 import CalendarView from './components/CalendarView';
 import StatsChart from './components/StatsChart';
 import ThaiDatePicker from './components/ThaiDatePicker';
@@ -28,6 +28,9 @@ function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
   const [leaves, setLeaves] = useState<LeaveRecord[]>(INITIAL_LEAVES);
+  const [cancelledLeaves, setCancelledLeaves] = useState<CancelledLeave[]>([]);
+  const [viewMode, setViewMode] = useState<'calendar' | 'history'>('calendar');
+  const [currentDate, setCurrentDate] = useState(new Date());
   
   const [isLeaveModalOpen, setIsLeaveModalOpen] = useState(false);
   const [leaveStartDate, setLeaveStartDate] = useState<string>('');
@@ -53,6 +56,12 @@ function App() {
   // State for Deleting Confirmation
   const [leaveToDelete, setLeaveToDelete] = useState<BatchLeaveState | null>(null);
   
+  // Password Protection State
+  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+  const [pendingDepartment, setPendingDepartment] = useState<Department | null>(null);
+  const [passwordInput, setPasswordInput] = useState('');
+  const [passwordError, setPasswordError] = useState(false);
+
   const fetchAndSetData = async (isShowAlert = false) => {
     setIsSyncing(true);
     try {
@@ -70,23 +79,46 @@ function App() {
         .select('*');
 
       if (leaveError) throw leaveError;
+
+      // Fetch Cancelled Leaves (Optional - don't let it block main data if table doesn't exist yet)
+      let processedCancelled: CancelledLeave[] = [];
+      try {
+        const { data: cancelledData, error: cancelledError } = await supabase
+          .from('cancelled_leaves')
+          .select('*')
+          .order('cancelled_at', { ascending: false });
+
+        if (!cancelledError && cancelledData) {
+          processedCancelled = cancelledData.map((l: any) => ({
+            id: l.id,
+            cancelledAt: l.cancelled_at,
+            employeeId: l.employee_id,
+            employeeName: l.employee_name,
+            leaveDate: l.leave_date,
+            leaveType: l.leave_type as LeaveType,
+            department: l.department
+          }));
+        }
+      } catch (e) {
+        console.warn("Cancelled leaves table might not exist yet:", e);
+      }
       
       const fetchedEmployees: Employee[] = (empData || []).map((e: any) => ({
         id: e.id,
         name: e.name,
-        // Trim whitespace to ensure exact matching with Enum
         department: (e.department || '').trim() as Department
       }));
 
       const processedLeaves: LeaveRecord[] = (leaveData || []).map((l: any) => ({
         id: l.id,
-        employeeId: l.employee_id, // Map database column snake_case to camelCase
+        employeeId: l.employee_id,
         date: l.date,
         type: l.type as LeaveType
       }));
       
       setEmployees(fetchedEmployees);
       setLeaves(processedLeaves);
+      setCancelledLeaves(processedCancelled);
       
       console.log(`Loaded ${fetchedEmployees.length} employees and ${processedLeaves.length} leaves`);
       
@@ -163,9 +195,28 @@ function App() {
   }, [leaveStartDate, leaveEndDate]);
 
   const handleDepartmentSelect = (dept: Department) => {
-    setCurrentDepartment(dept);
-    setSearchQuery('');
-    setSelectedEmployee(null);
+    setPendingDepartment(dept);
+    setPasswordInput('');
+    setPasswordError(false);
+    setIsPasswordModalOpen(true);
+  };
+
+  const handlePasswordSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!pendingDepartment) return;
+
+    if (passwordInput === DEPARTMENT_PASSWORDS[pendingDepartment]) {
+      setCurrentDepartment(pendingDepartment);
+      setSearchQuery('');
+      setSelectedEmployee(null);
+      setIsPasswordModalOpen(false);
+      setPendingDepartment(null);
+      setPasswordInput('');
+      setPasswordError(false);
+    } else {
+      setPasswordError(true);
+      // Shake effect or just error message
+    }
   };
 
   const handleUserSelect = (emp: Employee) => {
@@ -213,13 +264,29 @@ function App() {
           if (currentGroup.length === 0) {
               currentGroup.push(l);
           } else {
-              const lastDate = new Date(currentGroup[currentGroup.length - 1].date);
-              const currDate = new Date(l.date);
-              const diffTime = Math.abs(currDate.getTime() - lastDate.getTime());
-              const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+              const [y1, m1, d1] = currentGroup[currentGroup.length - 1].date.split('-').map(Number);
+              const lastDate = new Date(y1, m1 - 1, d1);
+              
+              const [y2, m2, d2] = l.date.split('-').map(Number);
+              const currDate = new Date(y2, m2 - 1, d2);
+              
+              // Check if there are any working days (not weekend/holiday) between these two leave dates
+              let hasWorkingDayBetween = false;
+              const tempDate = new Date(lastDate);
+              tempDate.setDate(tempDate.getDate() + 1);
+              
+              while (tempDate < currDate) {
+                const day = tempDate.getDay();
+                const isWeekend = day === 0 || day === 6;
+                const isHoliday = !!getHolidayName(tempDate);
+                if (!isWeekend && !isHoliday) {
+                  hasWorkingDayBetween = true;
+                  break;
+                }
+                tempDate.setDate(tempDate.getDate() + 1);
+              }
 
-              // If gap is <= 4 days (e.g., Fri -> Mon is 3 days gap), group them
-              if (diffDays <= 4) {
+              if (!hasWorkingDayBetween) {
                   currentGroup.push(l);
               } else {
                   groups.push(currentGroup);
@@ -290,6 +357,26 @@ function App() {
       if (!leaveToDelete || !selectedEmployee) return;
       setIsSaving(true);
       try {
+        // Record cancellation history (Optional - don't block deletion if table doesn't exist)
+        try {
+          const cancellationInserts = leaveToDelete.ids.map(id => {
+            const leave = leaves.find(l => l.id === id);
+            return {
+              employee_id: selectedEmployee.id,
+              employee_name: selectedEmployee.name,
+              leave_date: leave?.date || '',
+              leave_type: leave?.type || leaveToDelete.type,
+              department: currentDepartment || ''
+            };
+          });
+
+          await supabase
+            .from('cancelled_leaves')
+            .insert(cancellationInserts);
+        } catch (e) {
+          console.warn("Could not record cancellation history:", e);
+        }
+
         // Delete multiple IDs
         const { error } = await supabase
           .from('leaves')
@@ -300,6 +387,29 @@ function App() {
 
         // Filter out all deleted IDs from local state
         setLeaves(prev => prev.filter(l => !leaveToDelete.ids.includes(l.id)));
+        
+        // Refresh cancelled leaves (Optional)
+        try {
+          const { data: newCancelledData } = await supabase
+            .from('cancelled_leaves')
+            .select('*')
+            .order('cancelled_at', { ascending: false });
+          
+          if (newCancelledData) {
+            setCancelledLeaves(newCancelledData.map((l: any) => ({
+              id: l.id,
+              cancelledAt: l.cancelled_at,
+              employeeId: l.employee_id,
+              employeeName: l.employee_name,
+              leaveDate: l.leave_date,
+              leaveType: l.leave_type as LeaveType,
+              department: l.department
+            })));
+          }
+        } catch (e) {
+          console.warn("Could not refresh cancelled leaves:", e);
+        }
+
         setLeaveToDelete(null);
       } catch (error: any) {
         console.error('Error deleting leave:', error);
@@ -554,6 +664,20 @@ function App() {
                 </div>
               ))}
              </div>
+             <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-lg border border-slate-200">
+                <button 
+                  onClick={() => setViewMode('calendar')}
+                  className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-2 ${viewMode === 'calendar' ? 'bg-white text-blue-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                >
+                  <CalendarIcon className="w-4 h-4" /> ปฏิทิน
+                </button>
+                <button 
+                  onClick={() => setViewMode('history')}
+                  className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-2 ${viewMode === 'history' ? 'bg-white text-blue-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                >
+                  <History className="w-4 h-4" /> ประวัติยกเลิก
+                </button>
+             </div>
              <button onClick={() => fetchAndSetData(true)} className="p-2 text-slate-500 hover:text-blue-700 hover:bg-slate-100 rounded-full transition-all" title="รีเฟรชข้อมูล">
                 <RefreshCw className={`w-5 h-5 ${isSyncing ? 'animate-spin text-blue-700' : ''}`} />
              </button>
@@ -584,8 +708,13 @@ function App() {
                     placeholder="ค้นหาชื่อบุคลากร..." 
                     value={searchQuery} 
                     onChange={(e) => {
-                        setSearchQuery(e.target.value);
-                        if (e.target.value === '') setSelectedEmployee(null);
+                        const val = e.target.value;
+                        setSearchQuery(val);
+                        // If user starts typing something else or clears the input, 
+                        // reset selection to show search results dropdown
+                        if (val === '' || (selectedEmployee && val !== selectedEmployee.name)) {
+                            setSelectedEmployee(null);
+                        }
                     }} 
                   />
                   {searchQuery && !selectedEmployee && filteredEmployees.length > 0 && (
@@ -646,13 +775,96 @@ function App() {
 
         <section className="lg:col-span-9 h-full">
             <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden h-[580px] md:h-[780px] flex flex-col">
-                <CalendarView 
-                  leaves={leaves} 
-                  employees={departmentEmployees} 
-                  selectedEmployeeId={selectedEmployee?.id || null} 
-                  onDateClick={handleDateClick} 
-                  onLeaveClick={handleLeaveClick}
-                />
+                {viewMode === 'calendar' ? (
+                  <CalendarView 
+                    leaves={leaves} 
+                    employees={departmentEmployees} 
+                    selectedEmployeeId={selectedEmployee?.id || null} 
+                    onDateClick={handleDateClick} 
+                    onLeaveClick={handleLeaveClick}
+                    currentDate={currentDate}
+                    onMonthChange={setCurrentDate}
+                  />
+                ) : (
+                  <div className="flex flex-col h-full">
+                    <div className="px-6 py-4 border-b border-slate-100 bg-white flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="bg-red-50 p-2 rounded-lg border border-red-100">
+                          <History className="w-5 h-5 text-red-600" />
+                        </div>
+                        <div>
+                          <h2 className="text-lg font-bold text-slate-900">ประวัติการยกเลิกการลา</h2>
+                          <p className="text-xs text-slate-500 font-bold">
+                            ประจำเดือน {["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"][currentDate.getMonth()]} {currentDate.getFullYear() + 543}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1 bg-slate-50 border border-slate-100 rounded-lg p-1">
+                        <button onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1))} className="p-1.5 hover:bg-white hover:shadow-sm rounded-md text-slate-600 transition-all">
+                          <ChevronLeft className="w-5 h-5" />
+                        </button>
+                        <button onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1))} className="p-1.5 hover:bg-white hover:shadow-sm rounded-md text-slate-600 transition-all">
+                          <ChevronRight className="w-5 h-5" />
+                        </button>
+                      </div>
+                    </div>
+                    <div className="flex-1 overflow-y-auto p-6">
+                      <div className="space-y-4">
+                        {cancelledLeaves
+                          .filter(l => {
+                            const d = new Date(l.leaveDate);
+                            return d.getMonth() === currentDate.getMonth() && d.getFullYear() === currentDate.getFullYear();
+                          })
+                          .length === 0 ? (
+                            <div className="text-center py-20 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200">
+                              <History className="w-12 h-12 text-slate-200 mx-auto mb-4" />
+                              <p className="text-slate-400 font-bold">ไม่พบประวัติการยกเลิกในเดือนนี้</p>
+                            </div>
+                          ) : (
+                            <div className="grid grid-cols-1 gap-3">
+                              {cancelledLeaves
+                                .filter(l => {
+                                  const d = new Date(l.leaveDate);
+                                  return d.getMonth() === currentDate.getMonth() && d.getFullYear() === currentDate.getFullYear();
+                                })
+                                .map(l => (
+                                  <div key={l.id} className="bg-white border border-slate-200 rounded-xl p-4 flex items-center justify-between hover:border-red-200 hover:shadow-sm transition-all">
+                                    <div className="flex items-center gap-4">
+                                      <div className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 border border-slate-100">
+                                        <User className="w-5 h-5" />
+                                      </div>
+                                      <div>
+                                        <h4 className="font-bold text-slate-900 text-sm">{l.employeeName}</h4>
+                                        <div className="flex items-center gap-2 mt-1">
+                                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full text-white ${LEAVE_COLORS[l.leaveType]}`}>
+                                            {l.leaveType}
+                                          </span>
+                                          <span className="text-[10px] text-slate-400 font-bold">
+                                            วันที่ลา: {formatDateDisplay(l.leaveDate)}
+                                          </span>
+                                        </div>
+                                      </div>
+                                    </div>
+                                    <div className="text-right">
+                                      <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">ยกเลิกเมื่อ</p>
+                                      <p className="text-xs font-bold text-red-600 mt-0.5">
+                                        {new Date(l.cancelledAt).toLocaleString('th-TH', { 
+                                          day: '2-digit', 
+                                          month: '2-digit', 
+                                          year: 'numeric',
+                                          hour: '2-digit',
+                                          minute: '2-digit'
+                                        })}
+                                      </p>
+                                    </div>
+                                  </div>
+                                ))}
+                            </div>
+                          )}
+                      </div>
+                    </div>
+                  </div>
+                )}
             </div>
         </section>
       </main>
@@ -897,6 +1109,69 @@ function App() {
                 {isSaving ? <Loader2 className="w-4 h-4 animate-spin"/> : null} ลบรายชื่อ
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Password Modal */}
+      {isPasswordModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[100] flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm animate-in fade-in zoom-in-95 duration-200 border border-slate-200 overflow-hidden">
+            <div className="bg-slate-50 px-6 py-4 border-b border-slate-100 flex justify-between items-center">
+              <h3 className="font-bold text-slate-900 flex items-center gap-2">
+                <Lock className="w-4 h-4 text-blue-600" /> ยืนยันรหัสผ่าน
+              </h3>
+              <button 
+                onClick={() => setIsPasswordModalOpen(false)} 
+                className="text-slate-400 hover:text-slate-900 transition-colors"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            <form onSubmit={handlePasswordSubmit} className="p-6">
+              <div className="text-center mb-6">
+                <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-3 border border-blue-100">
+                  <Lock className="w-8 h-8 text-blue-600" />
+                </div>
+                <h4 className="font-bold text-slate-900 mb-1">{pendingDepartment}</h4>
+                <p className="text-xs text-slate-500 font-medium">กรุณาใส่รหัสผ่านเพื่อเข้าสู่ระบบแผนก</p>
+              </div>
+              
+              <div className="mb-6">
+                <input 
+                  type="password" 
+                  autoFocus
+                  className={`w-full px-4 py-3 bg-slate-50 border rounded-xl outline-none text-center text-2xl tracking-[0.5em] font-bold transition-all ${passwordError ? 'border-red-500 bg-red-50 text-red-600 animate-shake' : 'border-slate-200 focus:border-blue-500 focus:bg-white'}`}
+                  placeholder="••••"
+                  value={passwordInput}
+                  onChange={(e) => {
+                    setPasswordInput(e.target.value);
+                    setPasswordError(false);
+                  }}
+                />
+                {passwordError && (
+                  <p className="text-center text-red-500 text-xs font-bold mt-2 flex items-center justify-center gap-1">
+                    <AlertTriangle className="w-3 h-3" /> รหัสผ่านไม่ถูกต้อง
+                  </p>
+                )}
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <button 
+                  type="submit"
+                  className="w-full py-3.5 bg-blue-700 text-white rounded-xl font-bold hover:bg-blue-800 shadow-lg shadow-blue-200 transition-all flex items-center justify-center gap-2"
+                >
+                  เข้าสู่ระบบ
+                </button>
+                <button 
+                  type="button"
+                  onClick={() => setIsPasswordModalOpen(false)}
+                  className="w-full py-3 text-slate-500 font-bold hover:text-slate-700 transition-colors"
+                >
+                  ยกเลิก
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

@@ -13,6 +13,12 @@ export const DEPARTMENTS = [
   { id: Department.DATA_CENTER, label: Department.DATA_CENTER, icon: 'Database', color: 'bg-indigo-700' },
 ];
 
+export const DEPARTMENT_PASSWORDS: Record<string, string> = {
+  [Department.OPD]: '1048',
+  [Department.IPD]: '1033',
+  [Department.DATA_CENTER]: '1187'
+};
+
 // Fixed Holidays (Date doesn't change)
 // EXCLUDED: Labor Day (May 1), Teachers' Day (Jan 16) as they are working days for Gov/MOPH.
 const FIXED_HOLIDAYS: Record<string, string> = {

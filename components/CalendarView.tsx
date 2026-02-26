@@ -10,6 +10,8 @@ interface CalendarViewProps {
   onLeaveClick: (leaveId: string, date: string, type: LeaveType) => void;
   selectedEmployeeId: string | null;
   employees: Employee[];
+  currentDate: Date;
+  onMonthChange: (date: Date) => void;
 }
 
 interface DailyLeave {
@@ -20,17 +22,23 @@ interface DailyLeave {
     isSelected: boolean;
 }
 
-const CalendarView: React.FC<CalendarViewProps> = ({ leaves, onDateClick, onLeaveClick, selectedEmployeeId, employees }) => {
-  const [currentDate, setCurrentDate] = useState(new Date());
-
+const CalendarView: React.FC<CalendarViewProps> = ({ 
+  leaves, 
+  onDateClick, 
+  onLeaveClick, 
+  selectedEmployeeId, 
+  employees,
+  currentDate,
+  onMonthChange
+}) => {
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
 
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const firstDayOfMonth = new Date(year, month, 1).getDay();
 
-  const prevMonth = () => setCurrentDate(new Date(year, month - 1, 1));
-  const nextMonth = () => setCurrentDate(new Date(year, month + 1, 1));
+  const prevMonth = () => onMonthChange(new Date(year, month - 1, 1));
+  const nextMonth = () => onMonthChange(new Date(year, month + 1, 1));
 
   const leavesMap = useMemo(() => {
     const map: Record<string, DailyLeave[]> = {};
