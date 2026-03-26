@@ -4,7 +4,7 @@ import {
   Users, Activity, Database, Search, Calendar as CalendarIcon, 
   ArrowLeft, CheckCircle2, LayoutDashboard, ChevronRight, ChevronLeft, UserPlus, X,
   Trash2, Save, AlertTriangle, Loader2, User,
-  Pencil, Undo2, Edit3, RefreshCw, History, Lock
+  Pencil, Undo2, Edit3, RefreshCw, History, Lock, HelpCircle
 } from 'lucide-react';
 import { Department, Employee, LeaveRecord, LeaveType, LEAVE_COLORS, CancelledLeave } from './types';
 import { INITIAL_EMPLOYEES, INITIAL_LEAVES, DEPARTMENTS, getHolidayName, DEPARTMENT_PASSWORDS } from './constants';
@@ -62,6 +62,8 @@ function App() {
   const [pendingDepartment, setPendingDepartment] = useState<Department | null>(null);
   const [passwordInput, setPasswordInput] = useState('');
   const [passwordError, setPasswordError] = useState(false);
+
+  const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
 
   const fetchAndSetData = async (isShowAlert = false) => {
     setIsSyncing(true);
@@ -644,6 +646,14 @@ function App() {
           })}
         </div>
         
+        <button 
+          onClick={() => setIsHelpModalOpen(true)}
+          className="mt-12 flex items-center gap-2 px-6 py-3 bg-white border border-slate-200 rounded-full shadow-sm hover:shadow-md hover:border-blue-300 transition-all text-slate-600 font-bold text-sm group"
+        >
+          <HelpCircle className="w-5 h-5 text-blue-600 group-hover:scale-110 transition-transform" />
+          <span>วิธีการใช้งานระบบ</span>
+        </button>
+        
         {/* Password Modal for Department Selection */}
         {isPasswordModalOpen && (
           <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[100] flex items-center justify-center p-4">
@@ -751,6 +761,14 @@ function App() {
              </div>
              <button onClick={() => fetchAndSetData(true)} className="p-2 text-slate-500 hover:text-blue-700 hover:bg-slate-100 rounded-full transition-all" title="รีเฟรชข้อมูล">
                 <RefreshCw className={`w-5 h-5 ${isSyncing ? 'animate-spin text-blue-700' : ''}`} />
+             </button>
+             <button 
+               onClick={() => setIsHelpModalOpen(true)} 
+               className="flex items-center gap-1.5 px-3 py-1.5 text-slate-500 hover:text-blue-700 hover:bg-slate-100 rounded-full transition-all" 
+               title="วิธีการใช้งาน"
+             >
+                <HelpCircle className="w-5 h-5" />
+                <span className="text-xs font-bold hidden md:inline">วิธีใช้งาน</span>
              </button>
              <div className="h-8 w-8 md:h-9 md:w-9 rounded-full bg-slate-900 flex items-center justify-center text-white shadow-sm">
                <Users className="w-4 h-4 md:w-5 md:h-5" />
@@ -1268,6 +1286,54 @@ function App() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Help Modal */}
+      {isHelpModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[100] flex items-center justify-center p-4">
+          <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-md animate-in fade-in zoom-in-95 duration-200 border border-slate-200 overflow-hidden p-8">
+            <div className="flex items-center justify-between mb-8">
+              <div className="flex items-center gap-3">
+                <div className="bg-blue-50 p-3 rounded-2xl">
+                  <HelpCircle className="w-6 h-6 text-blue-600" />
+                </div>
+                <h2 className="text-2xl font-bold text-slate-900">วิธีใช้งานระบบ</h2>
+              </div>
+              <button 
+                onClick={() => setIsHelpModalOpen(false)}
+                className="p-2 hover:bg-slate-100 rounded-full text-slate-400 transition-colors"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <div className="space-y-4 mb-10">
+              {[
+                { icon: LayoutDashboard, color: 'text-blue-600', bg: 'bg-blue-50', title: 'เข้าสู่ระบบ', desc: 'เลือกหน่วยงานของท่านเพื่อเริ่มต้นใช้งาน' },
+                { icon: Users, color: 'text-indigo-600', bg: 'bg-indigo-50', title: 'เลือกบุคลากร', desc: 'ค้นหาและเลือกชื่อที่ต้องการลงวันลา' },
+                { icon: CalendarIcon, color: 'text-orange-600', bg: 'bg-orange-50', title: 'บันทึกวันลา', desc: 'คลิกวันที่ในปฏิทิน (เลือกเต็มวัน/ครึ่งวันได้)' },
+                { icon: RefreshCw, color: 'text-purple-600', bg: 'bg-purple-50', title: 'จัดการวันลา', desc: 'คลิกรายการเดิมเพื่อแก้ไขหรือยกเลิก' },
+              ].map((step, idx) => (
+                <div key={idx} className="flex items-center gap-5 p-4 rounded-3xl bg-slate-50/50 border border-slate-100/50">
+                  <div className={`${step.bg} p-3 rounded-2xl shrink-0`}>
+                    <step.icon className={`w-6 h-6 ${step.color}`} />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-slate-900 text-lg leading-tight mb-0.5">{step.title}</h3>
+                    <p className="text-slate-500 text-sm font-medium">{step.desc}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <button 
+              onClick={() => setIsHelpModalOpen(false)}
+              className="w-full py-5 bg-[#151921] text-white rounded-[1.5rem] font-bold text-lg hover:opacity-90 transition-all shadow-xl shadow-slate-200"
+            >
+              เข้าใจแล้ว
+            </button>
           </div>
         </div>
       )}
