@@ -24,6 +24,7 @@ export interface LeaveRecord {
   employeeId: string;
   date: string; // ISO String YYYY-MM-DD
   type: LeaveType;
+  duration: number; // 1 for full day, 0.5 for half day
   note?: string;
 }
 
@@ -50,5 +51,6 @@ export interface CancelledLeave {
   employeeName: string;
   leaveDate: string;
   leaveType: LeaveType;
+  duration: number;
   department: string;
 }

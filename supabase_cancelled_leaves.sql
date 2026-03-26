@@ -7,6 +7,7 @@ create table if not exists cancelled_leaves (
   employee_name text not null,
   leave_date date not null,
   leave_type text not null,
+  duration numeric default 1 not null,
   department text not null
 );
 

@@ -19,7 +19,8 @@ create table if not exists leaves (
   created_at timestamp with time zone default timezone('utc'::text, now()) not null,
   employee_id uuid references employees(id) on delete cascade not null,
   date date not null,
-  type text not null
+  type text not null,
+  duration numeric default 1 not null
 );
 
 -- 3. เปิดใช้งาน Row Level Security (RLS) และสร้าง Policy ให้เข้าถึงได้ทุกคน

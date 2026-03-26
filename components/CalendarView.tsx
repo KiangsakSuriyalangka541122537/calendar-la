@@ -19,6 +19,7 @@ interface DailyLeave {
     employeeId: string;
     name: string;
     type: LeaveType;
+    duration: number;
     isSelected: boolean;
 }
 
@@ -52,6 +53,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({
           employeeId: l.employeeId,
           name: emp.name.split(' ')[0],
           type: l.type,
+          duration: l.duration || 1,
           isSelected: selectedEmployeeId === l.employeeId
       });
     });
@@ -151,7 +153,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({
                         }}
                         className={`px-1 py-0.5 rounded text-[9px] md:text-[10px] text-white truncate transition-all ${colorClass} ${styleClass}`}
                     >
-                        {leave.name}
+                        {leave.name} {leave.duration === 0.5 && '(ครึ่งวัน)'}
                     </div>
                 );
             })}

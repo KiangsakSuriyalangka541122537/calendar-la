@@ -36,6 +36,7 @@ function App() {
   const [leaveStartDate, setLeaveStartDate] = useState<string>('');
   const [leaveEndDate, setLeaveEndDate] = useState<string>('');
   const [leaveType, setLeaveType] = useState<LeaveType>(LeaveType.PERSONAL);
+  const [leaveDuration, setLeaveDuration] = useState<number>(1);
   
   const [isManageUserModalOpen, setIsManageUserModalOpen] = useState(false);
   const [userForm, setUserForm] = useState({ name: '' });
@@ -96,6 +97,7 @@ function App() {
             employeeName: l.employee_name,
             leaveDate: l.leave_date,
             leaveType: l.leave_type as LeaveType,
+            duration: Number(l.duration || 1),
             department: l.department
           }));
         }
@@ -113,7 +115,8 @@ function App() {
         id: l.id,
         employeeId: l.employee_id,
         date: l.date,
-        type: l.type as LeaveType
+        type: l.type as LeaveType,
+        duration: Number(l.duration || 1)
       }));
       
       setEmployees(fetchedEmployees);
@@ -241,6 +244,7 @@ function App() {
     setLeaveStartDate(dateStr);
     setLeaveEndDate(dateStr); 
     setLeaveType(LeaveType.PERSONAL); // Reset to default when opening new
+    setLeaveDuration(1); // Reset to default full day
     setIsLeaveModalOpen(true);
   };
 
@@ -366,6 +370,7 @@ function App() {
               employee_name: selectedEmployee.name,
               leave_date: leave?.date || '',
               leave_type: leave?.type || leaveToDelete.type,
+              duration: leave?.duration || 1,
               department: currentDepartment || ''
             };
           });
@@ -403,6 +408,7 @@ function App() {
               employeeName: l.employee_name,
               leaveDate: l.leave_date,
               leaveType: l.leave_type as LeaveType,
+              duration: Number(l.duration || 1),
               department: l.department
             })));
           }
@@ -438,7 +444,8 @@ function App() {
       const inserts = calculatedDatesToAdd.map(date => ({
         employee_id: selectedEmployee.id,
         date: date,
-        type: leaveType
+        type: leaveType,
+        duration: leaveDuration
       }));
 
       const { data, error } = await supabase
@@ -453,7 +460,8 @@ function App() {
           id: l.id,
           employeeId: l.employee_id,
           date: l.date,
-          type: l.type as LeaveType
+          type: l.type as LeaveType,
+          duration: Number(l.duration || 1)
         }));
         
         setLeaves(prev => [...prev, ...newLeaves]);
@@ -904,7 +912,7 @@ function App() {
                                         <h4 className="font-bold text-slate-900 text-sm">{l.employeeName}</h4>
                                         <div className="flex items-center gap-2 mt-1">
                                           <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full text-white ${LEAVE_COLORS[l.leaveType]}`}>
-                                            {l.leaveType}
+                                            {l.leaveType} {l.duration === 0.5 && '(ครึ่งวัน)'}
                                           </span>
                                           <span className="text-[10px] text-slate-400 font-bold">
                                             วันที่ลา: {formatDateDisplay(l.leaveDate)}
@@ -954,8 +962,29 @@ function App() {
                     <span className="text-xs font-bold text-blue-700 uppercase tracking-wider">รวมระยะเวลา</span>
                     <span className="text-[10px] text-slate-400 font-normal">(เฉพาะวันทำการ)</span>
                   </div>
-                  <span className="text-2xl font-black text-blue-900">{calculatedDatesToAdd.length} วัน</span>
+                  <span className="text-2xl font-black text-blue-900">{calculatedDatesToAdd.length * leaveDuration} วัน</span>
                 </div>
+
+                {/* Duration Toggle (Full Day / Half Day) - Only for Personal, Sick, Vacation */}
+                {[LeaveType.PERSONAL, LeaveType.SICK, LeaveType.VACATION].includes(leaveType) && (
+                  <div className="mb-6">
+                    <label className="text-xs font-bold text-slate-500 mb-3 block uppercase tracking-wider">รูปแบบการลา</label>
+                    <div className="grid grid-cols-2 gap-3">
+                      <button 
+                        onClick={() => setLeaveDuration(1)} 
+                        className={`py-2.5 rounded-xl border-2 text-sm font-bold transition-all ${leaveDuration === 1 ? 'border-blue-600 bg-blue-50 text-blue-900' : 'border-slate-100 text-slate-500 hover:border-slate-200'}`}
+                      >
+                        เต็มวัน (1.0)
+                      </button>
+                      <button 
+                        onClick={() => setLeaveDuration(0.5)} 
+                        className={`py-2.5 rounded-xl border-2 text-sm font-bold transition-all ${leaveDuration === 0.5 ? 'border-blue-600 bg-blue-50 text-blue-900' : 'border-slate-100 text-slate-500 hover:border-slate-200'}`}
+                      >
+                        ครึ่งวัน (0.5)
+                      </button>
+                    </div>
+                  </div>
+                )}
                 <div className="grid grid-cols-1 gap-2 mb-6 max-h-60 overflow-y-auto pr-1">
                 {Object.values(LeaveType).map((type) => (
                     <button key={type} onClick={() => setLeaveType(type)} className={`w-full px-4 py-3 rounded-xl border-2 text-sm flex items-center justify-between transition-all ${leaveType === type ? `border-blue-600 bg-blue-50 text-blue-900 font-bold shadow-sm` : 'border-slate-100 text-slate-600 font-medium hover:border-slate-300'}`}>

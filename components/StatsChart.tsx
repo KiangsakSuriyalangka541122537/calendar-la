@@ -28,8 +28,9 @@ const StatsChart: React.FC<StatsChartProps> = ({ leaves, currentYear }) => {
 
       if (!isWeekend && !isHoliday) {
           const month = dateObj.getMonth();
-          if (month <= 4) counts[leave.type].p1 += 1;
-          else counts[leave.type].p2 += 1;
+          const duration = leave.duration || 1;
+          if (month <= 4) counts[leave.type].p1 += duration;
+          else counts[leave.type].p2 += duration;
       }
     });
 
